@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from math import log
+from math import log, log1p
 from random import Random
 from sys import maxsize
 from typing import Generic, Iterable, Set, TypeVar
@@ -14,10 +14,23 @@ T = TypeVar("T")
 class BloomFilter(Generic[T]):
     """Space efficient probabilistic estimation of a set"""
 
-    def __init__(self, num_hash_functions: int, len_bit_set: int):
+    def __init__(self, k: int, m: int):
         self._bits: Set[int] = set()
-        self._k = num_hash_functions
-        self._m = len_bit_set
+        self._k = k
+        self._m = m
+
+    @staticmethod
+    def from_approximate_epsilon(n: int, epsilon: float) -> BloomFilter:
+        """Computes the optimal length of a bit array for an approximate error rate"""
+        m = m_with_approximate_epsilon(n, epsilon)
+        k = optimal_k(m, n)
+        return BloomFilter(k, m)
+
+    @staticmethod
+    def from_epsilon_upper_bound(n: int, k: int, epsilon: float) -> BloomFilter:
+        """Computes the optimal length of a bit array for an error upper bound"""
+        m = m_with_epsilon_upper_bound(n, k, epsilon)
+        return BloomFilter(k, m)
 
     def __contains__(self, element: T) -> bool:
         """Test `element` for inclusion in the bloom filter"""
@@ -43,3 +56,22 @@ class BloomFilter(Generic[T]):
         if len(self._bits) == self._m:
             return maxsize
         return round(-(self._m / self._k) * log(1 - len(self._bits) / self._m))
+
+
+def optimal_k(m: int, n: int) -> int:
+    """Computes k that minimizes the false positive probability"""
+    return max(1, round(m / n * log(2)))
+
+
+def m_with_approximate_epsilon(n: int, epsilon: float) -> int:
+    """Computes the optimal length of a bit array for an approximate error rate"""
+    numerator = n * log(epsilon)
+    denominator = log(2) ** 2
+    return max(1, round(-(numerator / denominator)))
+
+
+def m_with_epsilon_upper_bound(n: int, k: int, epsilon: float) -> int:
+    """Computes the optimal length of a bit array for an error upper bound"""
+    minuend = log1p(-(epsilon ** (1 / k)))
+    subtrahend = k * (n + 0.5)
+    return max(1, round((minuend - subtrahend) / minuend))

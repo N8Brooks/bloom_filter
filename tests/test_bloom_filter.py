@@ -3,7 +3,12 @@
 from random import shuffle
 from sys import maxsize
 
-from bloom_filter.bloom_filter import BloomFilter
+from bloom_filter.bloom_filter import (
+    BloomFilter,
+    m_with_approximate_epsilon,
+    m_with_epsilon_upper_bound,
+    optimal_k,
+)
 
 # pylint: disable=invalid-name,missing-function-docstring,protected-access
 
@@ -50,3 +55,15 @@ def test_max_len():
     bloom_filter = BloomFilter(100, m)
     bloom_filter._bits = set(range(m))
     assert len(bloom_filter) == maxsize
+
+
+def test_optimal_k():
+    assert optimal_k(100, 1) == 69
+
+
+def test_m_with_approximate_epsilon():
+    assert m_with_approximate_epsilon(1e6, 1e-2) == 9_585_058
+
+
+def test_m_with_epsilon_upper_bound():
+    assert m_with_epsilon_upper_bound(1e6, 10, 1e-2) == 10_031_676
